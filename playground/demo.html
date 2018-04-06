@@ -1,0 +1,17 @@
+<div *ngIf="session">
+  <div>{{session.username}}</div>
+  <div>{{session.role}}</div>
+  <div>{{session.key}}</div>
+  <div>{{session.secret}}</div>
+  <div>{{session.startTime}}</div>
+  <div>{{session.duration}}</div>
+  <div *ngIf="session.merchant | async">
+    <div>Merchant: {{(session.merchant | async).name}}</div>
+  </div>
+  <div *ngIf="session.profile | async">
+    <div>Profile: {{(session.profile | async).fullName}}</div>
+  </div>
+</div>
+<div *ngIf="!session">
+  You are not logged in!
+</div>
