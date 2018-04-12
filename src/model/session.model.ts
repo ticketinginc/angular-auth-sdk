@@ -1,4 +1,5 @@
 import { Observable } from 'rxjs/Observable';
+import { Subscriber } from 'rxjs/Subscriber';
 import { ConfigService, Profile, Merchant, ProfileService, MerchantService } from '@ticketing/angular-core-sdk';
 import { config } from '../config';
 
@@ -9,19 +10,11 @@ export class Session{
   constructor(public username: string, public role: string, public key: string, public secret: string,
               public startTime: Date, public endTime: Date, private _profile: string, private _merchant: string,
               private _profileService: ProfileService, private _merchantService: MerchantService,
-              private _configService: ConfigService, private _appConfig: any){
+              private _configService: ConfigService, private _appConfig: any, private _observer: Subscriber<Session>){
       this.startTime = new Date(startTime);
       this.endTime = endTime?new Date(endTime):null;
       this.profile = this._getProfile();
       this.merchant = this._getMerchant();
-  }
-
-  get duration(): number{
-    if(this.isOpen()){
-      return (new Date().getTime() - this.startTime.getTime()) / 1000;
-    }else{
-      return (this.endTime.getTime() - this.startTime.getTime()) / 1000;
-    }
   }
 
   isOpen(): boolean{
@@ -33,6 +26,8 @@ export class Session{
     this._configService.setKey(this._appConfig.key);
     this._configService.setSecret(this._appConfig.secret);
     this._configService.setBaseUrl(config[this._appConfig.production?"production":"sandbox"].BASE);
+
+    this._observer.next(this);
   }
 
   private _getProfile(): Observable<Profile>{

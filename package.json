@@ -1,6 +1,6 @@
 {
   "name": "@ticketing/angular-auth-sdk",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "scripts": {
     "build": "gulp build",
     "build:watch": "gulp",
@@ -75,6 +75,6 @@
     "node": ">=6.0.0"
   },
   "dependencies": {
-    "@ticketing/angular-core-sdk": "^0.3.1"
+    "@ticketing/angular-core-sdk": "^0.4.0"
   }
 }

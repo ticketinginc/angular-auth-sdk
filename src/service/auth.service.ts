@@ -1,5 +1,6 @@
 import { Injectable, Inject } from '@angular/core';
 import { Observable } from 'rxjs/Observable';
+import { Subscriber } from 'rxjs/Subscriber';
 
 import { config } from '../config';
 import { ConfigService, ConnectionService, Connection,
@@ -10,6 +11,7 @@ import { Session } from '../model/session.model';
 export class AuthService extends ModelService{
   private _session: Session;
   private _env: string;
+  private _sessionObserver: Subscriber<Session>;
 
   constructor(@Inject('APP_CONFIG') private _appConfig: any, _configService: ConfigService,
               private _connectionService: ConnectionService, private _profileService: ProfileService,
@@ -33,20 +35,9 @@ export class AuthService extends ModelService{
     return Observable.create(observer => {
       self._openSession(username,password).subscribe(userData => {
         if(userData){
-          self._session = new Session(
-            userData.username,
-            userData.role,
-            userData.key,
-            userData.secret,
-            new Date(),
-            null,
-            userData.profile,
-            "",
-            self._profileService,
-            self._merchantService,
-            self._configService,
-            self._appConfig
-          );
+          self._buildSession(userData).subscribe(session => {
+            this._saveSession(session);
+          })
         }
 
         observer.next(self._session);
@@ -57,22 +48,11 @@ export class AuthService extends ModelService{
   openMerchantSession(merchantCode: string, username: string, password: string): Observable<Session>{
     let self = this;
     return Observable.create(observer => {
-      this._openSession(merchantCode+";"+username,password).subscribe(userData => {
+      self._openSession(username,password,merchantCode).subscribe(userData => {
         if(userData){
-          self._session = new Session(
-            username,
-            userData.role,
-            userData.key,
-            userData.secret,
-            new Date(),
-            null,
-            userData.profile,
-            merchantCode,
-            self._profileService,
-            self._merchantService,
-            self._configService,
-            self._appConfig
-          );
+          self._buildSession(userData).subscribe(session => {
+            this._saveSession(session);
+          })
         }
 
         observer.next(self._session);
@@ -80,9 +60,26 @@ export class AuthService extends ModelService{
     });
   }
 
-  private _openSession(username: string, password: string): Observable<any>{
+  getActiveSession(){
+    let sessionKey = "@ticketing/angular-auth-sdk:last-session";
+    if(!this._session && localStorage.getItem(sessionKey)){
+      let userData = JSON.parse(localStorage.getItem(sessionKey));
+      this._configService.setKey(userData.key);
+      this._configService.setSecret(userData.secret);
+      this._configService.setBaseUrl(config[this._env].API);
+
+      this._buildSession(userData).subscribe(session => {
+        this._saveSession(session);
+      })
+    }
+
+    return this._session;
+  }
+
+  private _openSession(username: string, password: string, merchantCode: string = ""): Observable<any>{
     let endpoint = `/apis/${config[this._env].API_ID}/users`;
     let self = this;
+    let realUsername = (merchantCode?`${merchantCode};`:"")+username;
 
     if(this._session){
       this._session.close();
@@ -90,7 +87,7 @@ export class AuthService extends ModelService{
 
     return Observable.create(observer => {
       self._connection.get(endpoint,{
-        usernames:username
+        usernames:realUsername
       }).map(users => users.entries)
         .subscribe(
           users => {
@@ -98,7 +95,7 @@ export class AuthService extends ModelService{
               let user = users[0];
 
               //Open user authenticated connection for token retrieval
-              self._configService.setKey(username);
+              self._configService.setKey(realUsername);
               self._configService.setSecret(password);
               let authConnection = self._connectionService.openConnection();
 
@@ -109,13 +106,16 @@ export class AuthService extends ModelService{
                   self._configService.setSecret(tokens.secret);
                   self._configService.setBaseUrl(config[this._env].API);
 
-                  observer.next({
-                    username:user.username,
+                  let userData = {
+                    username:username,
                     role:user.role,
                     key:tokens.key,
                     secret:tokens.secret,
-                    profile:user.options.profile
-                  });
+                    profile:user.options.profile,
+                    merchantCode:merchantCode
+                  };
+
+                  observer.next(userData);
                 },
                 error => {
                   observer.next(null);
@@ -130,5 +130,51 @@ export class AuthService extends ModelService{
           }
         )
     })
+  }
+
+  private _buildSession(userData: any){
+    return Observable.create(observer => {
+      observer.next(new Session(
+        userData.username,
+        userData.role,
+        userData.key,
+        userData.secret,
+        new Date(),
+        null,
+        userData.profile,
+        userData.merchantCode,
+        this._profileService,
+        this._merchantService,
+        this._configService,
+        this._appConfig,
+        observer
+      ))
+    })
+  }
+
+  private _saveSession(session: Session){
+    let sessionKey = "@ticketing/angular-auth-sdk:last-session";
+    this._session = session;
+    if(session.isOpen()){
+      session.profile.subscribe(profile => {
+        session.merchant.subscribe(merchant => {
+          (merchant?merchant.tokens:Observable.of({code:""})).subscribe(tokens => {
+            let userData = {
+              username:session.username,
+              role:session.role,
+              key:session.key,
+              secret:session.secret,
+              profile:(profile?config[this._env].API+profile.endpoint:""),
+              merchantCode:tokens.code
+            };
+
+            localStorage.setItem(sessionKey,JSON.stringify(userData));
+            this._session = session;
+          })
+        })
+      })
+    }else{
+      localStorage.removeItem(sessionKey);
+    }
   }
 }

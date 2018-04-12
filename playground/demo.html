@@ -1,17 +1,33 @@
-<div *ngIf="session">
-  <div>{{session.username}}</div>
-  <div>{{session.role}}</div>
-  <div>{{session.key}}</div>
-  <div>{{session.secret}}</div>
-  <div>{{session.startTime}}</div>
-  <div>{{session.duration}}</div>
+<div *ngIf="session && session.isOpen()">
+  <h2>Welcome, {{session.username}} <span style='font-weight:20px' (click)='logout()'>(logout)</span></h2>
+  <div>Your role: {{session.role}}</div>
+  <div>Your API Key: {{session.key}}</div>
+  <div>Your API Secret: {{session.secret}}</div>
+  <div>Session Start: {{session.startTime}}</div>
   <div *ngIf="session.merchant | async">
     <div>Merchant: {{(session.merchant | async).name}}</div>
   </div>
   <div *ngIf="session.profile | async">
     <div>Profile: {{(session.profile | async).fullName}}</div>
   </div>
+  <button (click)="listEvents()">Show Events</button>
+  <div style='overflow:auto'>
+    <div *ngFor="let event of events" style='float:left'>
+      <img src="{{event.flyer}}" />
+      <div>{{event.title}}</div>
+      <div>{{event.startTime}}</div>
+    </div>
+  </div>
 </div>
-<div *ngIf="!session">
-  You are not logged in!
+<div *ngIf="!session || !session.isOpen()">
+  <div>
+    <input type='text' [(ngModel)]="merchant" placeholder='Enter your merchant code' />
+  </div>
+  <div>
+    <input type='text' [(ngModel)]="username" placeholder='Enter your username' />
+  </div>
+  <div>
+    <input type='password' [(ngModel)]="password" placeholder='Enter your password' />
+  </div>
+  <button (click)="login()">Login</button>
 </div>
