@@ -118,6 +118,8 @@ export class AuthService extends ModelService{
                   observer.next(userData);
                 },
                 error => {
+                  self._configService.setKey(self._appConfig.key);
+                  self._configService.setSecret(self._appConfig.secret);
                   observer.next(null);
                 }
               )
