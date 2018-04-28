@@ -16,10 +16,10 @@ export { Session } from './model/session.model';
     })
   ]
 })
-export class TickeTingAuthModule {
+export class AuthModule {
   static forRoot(appConfig: any): ModuleWithProviders {
     return {
-      ngModule: TickeTingAuthModule,
+      ngModule: AuthModule,
       providers: [
         {provide: 'APP_CONFIG', useValue: appConfig},
         AuthService
