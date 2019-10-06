@@ -8,12 +8,7 @@ export { Session } from './model/session.model';
 
 @NgModule({
   imports: [
-    TicketingModule.forRoot({
-      key:"",
-      secret:"",
-      production:false,
-      caching:false
-    })
+    TicketingModule
   ]
 })
 export class AuthModule {

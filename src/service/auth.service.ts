@@ -1,6 +1,6 @@
 import { Injectable, Inject } from '@angular/core';
-import { Observable } from 'rxjs/Observable';
-import { Subscriber } from 'rxjs/Subscriber';
+import { Observable, of } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 import { config } from '../config';
 import { ConfigService, ConnectionService, Connection,
@@ -11,7 +11,6 @@ import { Session } from '../model/session.model';
 export class AuthService extends ModelService{
   private _session: Session;
   private _env: string;
-  private _sessionObserver: Subscriber<Session>;
 
   constructor(@Inject('APP_CONFIG') private _appConfig: any, _configService: ConfigService,
               private _connectionService: ConnectionService, private _profileService: ProfileService,
@@ -27,7 +26,7 @@ export class AuthService extends ModelService{
          this._baseUrl = baseUrl;
       })
 
-      this._connection = _connectionService.openConnection();
+      this._connection = this._connectionService.openConnection();
   }
 
   openSession(username: string, password: string): Observable<Session>{
@@ -77,8 +76,9 @@ export class AuthService extends ModelService{
   }
 
   private _openSession(username: string, password: string, merchantCode: string = ""): Observable<any>{
-    let endpoint = `/apis/${config[this._env].API_ID}/users`;
+    let endpoint = `/users`;
     let self = this;
+    let connectionService = this._connectionService;
     let realUsername = (merchantCode?`${merchantCode};`:"")+username;
 
     if(this._session){
@@ -88,7 +88,7 @@ export class AuthService extends ModelService{
     return Observable.create(observer => {
       self._connection.get(endpoint,{
         usernames:realUsername
-      }).map(users => users.entries)
+      }).pipe(map((users: any) => users.entries))
         .subscribe(
           users => {
             if(users.length > 0){
@@ -97,7 +97,7 @@ export class AuthService extends ModelService{
               //Open user authenticated connection for token retrieval
               self._configService.setKey(realUsername);
               self._configService.setSecret(password);
-              let authConnection = self._connectionService.openConnection();
+              let authConnection = connectionService.openConnection();
 
               authConnection.get(this.getEndpoint(user.tokens)).subscribe(
                 tokens => {
@@ -160,7 +160,7 @@ export class AuthService extends ModelService{
     if(session.isOpen()){
       session.profile.subscribe(profile => {
         session.merchant.subscribe(merchant => {
-          (merchant?merchant.tokens:Observable.of({code:""})).subscribe(tokens => {
+          (merchant?merchant.tokens:of({code:""})).subscribe(tokens => {
             let userData = {
               username:session.username,
               role:session.role,

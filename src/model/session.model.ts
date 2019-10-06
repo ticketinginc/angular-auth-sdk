@@ -1,5 +1,4 @@
-import { Observable } from 'rxjs/Observable';
-import { Subscriber } from 'rxjs/Subscriber';
+import { Observable, Subscriber, of } from 'rxjs';
 import { ConfigService, Profile, Merchant, ProfileService, MerchantService } from '@ticketing/angular-core-sdk';
 import { config } from '../config';
 
@@ -31,7 +30,7 @@ export class Session{
   }
 
   private _getProfile(): Observable<Profile>{
-    return this._profile?this._profileService.getByUri(this._profile):Observable.of(null);
+    return this._profile?this._profileService.getByUri(this._profile):of(null);
   }
 
   private _getMerchant(): Observable<Merchant>{
